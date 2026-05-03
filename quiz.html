@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szoftverfejlesztés Kvíz & Vizsga</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #eab308;
+            --orange: #f97316;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; color: var(--text); }
+        #quiz-card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: 100%; max-width: 650px; }
+        
+        /* Menü stílusok */
+        .menu-container { text-align: center; }
+        .menu-btn { 
+            display: block; width: 100%; padding: 1.2rem; margin: 0.8rem 0; 
+            font-size: 1.1rem; font-weight: bold; border: 2px solid var(--primary);
+            background: white; color: var(--primary); border-radius: 0.5rem; cursor: pointer; transition: 0.3s;
+        }
+        .menu-btn:hover { background: var(--primary); color: white; }
+
+        /* Kvíz stílusok */
+        .progress { font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem; display: flex; justify-content: space-between; }
+        .question-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 1rem; }
+        
+        .question-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 15px auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .options-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .option-item { 
+            padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer; 
+            transition: all 0.2s; display: flex; align-items: center; gap: 10px;
+        }
+        .option-item:hover { background: #f1f5f9; border-color: var(--primary); }
+        .option-item.selected { border-color: var(--primary); background: #eff6ff; }
+        .option-item.correct { background: #dcfce7 !important; border-color: var(--success) !important; }
+        .option-item.wrong { background: #fee2e2 !important; border-color: var(--danger) !important; }
+        
+        .controls { margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+        button.action { padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none; background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
+        
+        .hidden { display: none; }
+        .multi-info { font-style: italic; color: #64748b; font-size: 0.85rem; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="quiz-card">
+    <div id="menu" class="menu-container">
+        <h1>Szoftverfejlesztés Készülgető</h1>
+        <p>Válassz egy üzemmódot:</p>
+        <button class="menu-btn" onclick="startQuiz('practice')">GYAKORLÁS<br><small>(Összes kérdés keverve)</small></button>
+        <button class="menu-btn" onclick="startQuiz('images')">ÁBRÁS KÉRDÉSEK<br><small>(Csak a képpel rendelkező feladatok)</small></button>
+        <button class="menu-btn" onclick="startQuiz('exam')">VIZSGA<br><small>(30 véletlenszerű kérdés)</small></button>
+    </div>
+
+    <div id="quiz-box" class="hidden">
+        <div class="progress">
+            <span id="progress-text"></span>
+            <span id="mode-text" style="font-weight: bold; color: var(--primary);"></span>
+        </div>
+        <div id="q-text" class="question-text"></div>
+        <div id="image-container"></div> <div id="multi-info" class="multi-info"></div>
+        <div id="options-list" class="options-list"></div>
+
+        <div class="controls">
+            <div id="status-msg" style="font-weight: bold;"></div>
+            <button id="action-btn" class="action">Ellenőrzés</button>
+        </div>
+    </div>
+
+    <div id="result-screen" class="hidden" style="text-align: center;">
+        <h2 id="result-title">Kvíz vége!</h2>
+        <p id="final-score" style="font-size: 1.5rem; font-weight: bold;"></p>
+        <button class="action" onclick="location.reload()">Vissza a menübe</button>
+    </div>
+</div>
+
+<script>
+    let allQuestions = []; 
+    let quizData = [];    
+    let currentIdx = 0;
+    let score = 0;
+    let isChecked = false;
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    async function initData() {
+        try {
+            const response = await fetch('./quiz.json');
+            if (!response.ok) throw new Error("Fájl hiba");
+            allQuestions = await response.json();
+        } catch (err) {
+            alert("Hiba: Nem sikerült betölteni a quiz.json-t! (Live Server fut?)");
+        }
+    }
+
+    function startQuiz(mode) {
+        if (allQuestions.length === 0) return;
+
+        document.getElementById('menu').classList.add('hidden');
+        document.getElementById('quiz-box').classList.remove('hidden');
+
+        let filteredQuestions = [];
+
+        if (mode === 'images') {
+            document.getElementById('mode-text').innerText = "ÁBRÁS GYAKORLÁS";
+            // MÓDOSÍTVA: Itt most az 'images' tömböt nézzük, hogy van-e benne elem
+            filteredQuestions = allQuestions.filter(q => q.images && q.images.length > 0 && q.images[0].trim() !== "");
+            
+            if (filteredQuestions.length === 0) {
+                alert("Nincs képpel rendelkező kérdés a JSON fájlban!");
+                location.reload();
+                return;
+            }
+            quizData = shuffle([...filteredQuestions]);
+        } else if (mode === 'exam') {
+            document.getElementById('mode-text').innerText = "VIZSGA";
+            quizData = shuffle([...allQuestions]).slice(0, 30);
+        } else {
+            document.getElementById('mode-text').innerText = "GYAKORLÁS";
+            quizData = shuffle([...allQuestions]);
+        }
+
+        quizData.forEach(q => shuffle(q.options));
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const q = quizData[currentIdx];
+        isChecked = false;
+        document.getElementById('status-msg').innerText = "";
+        document.getElementById('action-btn').innerText = "Ellenőrzés";
+        document.getElementById('progress-text').innerText = `${currentIdx + 1} / ${quizData.length}`;
+        
+        document.getElementById('q-text').innerText = q.question;
+        
+        // Kép kezelése (MÓDOSÍTVA a tömbös szerkezethez)
+        const imgContainer = document.getElementById('image-container');
+        imgContainer.innerHTML = ''; 
+
+        // Ellenőrizzük, hogy az 'images' egy tömb-e és van-e benne legalább egy elem
+        if (q.images && Array.isArray(q.images) && q.images.length > 0) {
+            const imgPath = q.images[0]; // Kivesszük az első képet
+            if (imgPath.trim() !== "") {
+                const img = document.createElement('img');
+                // A böngésző kedvéért a \ jeleket / jelre cseréljük, ha szükséges
+                img.src = imgPath.replace(/\\/g, '/'); 
+                img.className = 'question-image';
+                imgContainer.appendChild(img);
+            }
+        }
+
+        const optBox = document.getElementById('options-list');
+        optBox.innerHTML = '';
+
+        const correctCount = q.options.filter(o => o.is_correct).length;
+        document.getElementById('multi-info').innerText = correctCount > 1 ? `Figyelem: ${correctCount} helyes válasz van!` : "Egy helyes válasz van.";
+
+        q.options.forEach((opt, idx) => {
+            const div = document.createElement('div');
+            div.className = 'option-item';
+            div.innerText = opt.text;
+            div.onclick = () => { if(!isChecked) div.classList.toggle('selected'); };
+            optBox.appendChild(div);
+        });
+    }
+
+    document.getElementById('action-btn').onclick = () => {
+        if (!isChecked) {
+            if (!document.querySelector('.option-item.selected')) {
+                alert("Válassz legalább egy választ!");
+                return;
+            }
+            checkAnswer();
+        } else {
+            currentIdx++;
+            if (currentIdx < quizData.length) renderQuestion();
+            else showResults();
+        }
+    };
+
+    function checkAnswer() {
+        const q = quizData[currentIdx];
+        const items = document.querySelectorAll('.option-item');
+        let correctSelected = 0;
+        let totalCorrect = q.options.filter(o => o.is_correct).length;
+        let wrongSelection = false;
+
+        items.forEach((el, idx) => {
+            const isCorrect = q.options[idx].is_correct;
+            const isSelected = el.classList.contains('selected');
+
+            if (isCorrect) {
+                el.classList.add('correct');
+                if (isSelected) correctSelected++;
+            } else if (isSelected) {
+                el.classList.add('wrong');
+                wrongSelection = true;
+            }
+        });
+
+        if (!wrongSelection && correctSelected === totalCorrect) {
+            score++;
+            document.getElementById('status-msg').innerText = "Helyes!";
+            document.getElementById('status-msg').style.color = "var(--success)";
+        } else {
+            document.getElementById('status-msg').innerText = "Helytelen!";
+            document.getElementById('status-msg').style.color = "var(--danger)";
+        }
+
+        isChecked = true;
+        document.getElementById('action-btn').innerText = "Következő";
+    }
+
+    function showResults() {
+        document.getElementById('quiz-box').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        const percent = Math.round((score / quizData.length) * 100);
+        document.getElementById('final-score').innerText = `${score} / ${quizData.length} pont (${percent}%)`;
+        
+        const titleDisplay = document.getElementById('result-title');
+        
+        if (percent >= 91) {
+            titleDisplay.innerText = "Jeles (5) 🏆";
+            titleDisplay.style.color = "var(--success)";
+        } else if (percent >= 81) {
+            titleDisplay.innerText = "Jó (4) 😎";
+            titleDisplay.style.color = "var(--success)";
+        } else if (percent >= 66) {
+            titleDisplay.innerText = "Közepes (3) 😐";
+            titleDisplay.style.color = "var(--warning)";
+        } else if (percent >= 50) {
+            titleDisplay.innerText = "Elégséges (2) 😕";
+            titleDisplay.style.color = "var(--orange)";
+        } else {
+            titleDisplay.innerText = "Elégtelen (1) ❌";
+            titleDisplay.style.color = "var(--danger)";
+        }
+    }
+
+    initData();
+</script>
+</body>
+</html>
