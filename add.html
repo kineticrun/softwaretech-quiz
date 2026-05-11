@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kérdés Generátor</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 30px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    #input {
+      height: 220px;
+    }
+
+    #finalOutput {
+      height: 350px;
+      margin-top: 20px;
+      font-family: monospace;
+      background: #222;
+      color: #00ff88;
+    }
+
+    .preview {
+      margin-top: 25px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.08);
+    }
+
+    .question {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #f8f8f8;
+      border-radius: 8px;
+    }
+
+    .option label {
+      flex: 1;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    pre {
+      margin-top: 25px;
+      background: #222;
+      color: #00ff88;
+      padding: 15px;
+      border-radius: 10px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .info {
+      margin-top: 15px;
+      color: #666;
+    }
+
+    .section-title {
+      margin-top: 25px;
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .success {
+      margin-top: 15px;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Kérdés + Válasz Generátor</h1>
+
+  <textarea id="input" placeholder="Ide másold be a kérdést és a válaszokat..."></textarea>
+
+  <code>&lt;img src="image.png"&gt;</code>
+
+  <div class="preview">
+    <div id="question" class="question"></div>
+
+    <div id="options"></div>
+
+    <button id="addBtn">Add</button>
+
+    <div class="info">
+      Pipáld be a helyes válaszokat, majd nyomj Add-ot.
+    </div>
+
+    <div id="status" class="success"></div>
+
+    <div class="section-title">Aktuális JSON</div>
+    <pre id="output"></pre>
+
+    <div class="section-title">Összes kérdés (questions.json tartalma)</div>
+
+    <textarea id="finalOutput"></textarea>
+  </div>
+
+  <script>
+    const input = document.getElementById("input");
+    const questionDiv = document.getElementById("question");
+    const optionsDiv = document.getElementById("options");
+    const output = document.getElementById("output");
+    const addBtn = document.getElementById("addBtn");
+    const finalOutput = document.getElementById("finalOutput");
+    const statusDiv = document.getElementById("status");
+
+    let currentData = null;
+    let allQuestions = [];
+
+    // BETÖLTÉS questions.json-ból
+    async function loadQuestions() {
+      try {
+        const response = await fetch("questions.json");
+
+        if (!response.ok) {
+          throw new Error("Nincs questions.json");
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+          allQuestions = data;
+          finalOutput.value = JSON.stringify(allQuestions, null, 2);
+        }
+      } catch (err) {
+        console.log("questions.json nem található vagy üres.");
+
+        allQuestions = [];
+        finalOutput.value = JSON.stringify(allQuestions, null, 2);
+      }
+    }
+
+    function parseInput() {
+      const text = input.value.trim();
+
+      if (!text) {
+        questionDiv.innerHTML = "";
+        optionsDiv.innerHTML = "";
+        output.textContent = "";
+        currentData = null;
+        return;
+      }
+
+      const lines = text
+        .split("\n")
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      if (lines.length === 0) return;
+
+      let question = lines[0];
+
+      question = question.replace(/^Kérdés:\s*/i, "");
+
+      const answers = lines.slice(1);
+
+      questionDiv.textContent = question;
+
+      optionsDiv.innerHTML = "";
+
+      answers.forEach((answer) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+
+        checkbox.addEventListener("change", generateJSON);
+
+        const label = document.createElement("label");
+        label.textContent = answer;
+
+        wrapper.appendChild(checkbox);
+        wrapper.appendChild(label);
+
+        optionsDiv.appendChild(wrapper);
+      });
+
+      generateJSON();
+    }
+
+    function generateJSON() {
+      const question = questionDiv.textContent;
+
+      const optionElements = document.querySelectorAll(".option");
+
+      const options = [];
+
+      optionElements.forEach(el => {
+        const checkbox = el.querySelector("input");
+        const label = el.querySelector("label");
+
+        options.push({
+          text: label.textContent,
+          correct: checkbox.checked
+        });
+      });
+
+      currentData = {
+        question: question,
+        options: options,
+        explanation: ""
+      };
+
+      output.textContent = JSON.stringify(currentData, null, 2);
+    }
+
+    addBtn.addEventListener("click", () => {
+      if (!currentData) return;
+
+      // hozzáfűzés
+      allQuestions.push(currentData);
+
+      // teljes output frissítés
+      finalOutput.value = JSON.stringify(allQuestions, null, 2);
+
+      // státusz
+      statusDiv.textContent = "Kérdés hozzáadva.";
+
+      // reset
+      input.value = "";
+      questionDiv.innerHTML = "";
+      optionsDiv.innerHTML = "";
+      output.textContent = "";
+
+      currentData = null;
+    });
+
+    input.addEventListener("input", parseInput);
+
+    // oldal induláskor betöltés
+    loadQuestions();
+  </script>
+
+</body>
+</html>

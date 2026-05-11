@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Kvíz Szerkesztő - Helyes Válaszok Beállítása</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; line-height: 1.6; background-color: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .option { display: block; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: 0.3s; }
+        .option:hover { background-color: #e9f5ff; }
+        .option input { margin-right: 15px; transform: scale(1.2); }
+        .controls { display: flex; justify-content: space-between; align-items: center; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; }
+        button:disabled { background: #ccc; }
+        textarea { width: 100%; height: 200px; margin-top: 20px; font-family: monospace; padding: 10px; border: 1px solid #ccc; }
+        h3 { margin-top: 0; color: #333; }
+        .progress { font-weight: bold; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h2>Kvíz JSON feldolgozó</h2>
+    
+    <div id="setup-area" class="card">
+        <p>Másold be ide a Python kóddal generált JSON fájl tartalmát:</p>
+        <textarea id="input-json" placeholder='[{ "question": "... }]'></textarea>
+        <br><br>
+        <button onclick="loadJson()">Feldolgozás indítása</button>
+    </div>
+
+    <div id="editor-area" class="card" style="display:none;">
+        <div class="progress" id="progress">1 / 10</div>
+        <h3 id="question-text">Kérdés helye</h3>
+        <div id="options-container"></div>
+        <hr>
+        <div class="controls">
+            <button id="prev-btn" onclick="prevQuestion()">Előző</button>
+            <button id="next-btn" onclick="nextQuestion()">Következő / Mentés</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Eredmény (Módosított JSON):</h3>
+        <p>Ez a mező folyamatosan frissül, ahogy haladsz előre:</p>
+        <textarea id="output-json" readonly></textarea>
+        <br><br>
+        <button onclick="downloadJson()" style="background: #28a745;">JSON fájl letöltése</button>
+    </div>
+
+    <script>
+        let quizData = [];
+        let currentIndex = 0;
+
+        function loadJson() {
+            const raw = document.getElementById('input-json').value;
+            try {
+                quizData = JSON.parse(raw);
+                if (quizData.length > 0) {
+                    document.getElementById('setup-area').style.display = 'none';
+                    document.getElementById('editor-area').style.display = 'block';
+                    renderQuestion();
+                    updateOutput();
+                }
+            } catch (e) {
+                alert("Hiba: Érvénytelen JSON formátum!");
+            }
+        }
+
+        function renderQuestion() {
+            const q = quizData[currentIndex];
+            document.getElementById('progress').innerText = `${currentIndex + 1} / ${quizData.length}`;
+            document.getElementById('question-text').innerText = q.question;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const label = document.createElement('label');
+                label.className = 'option';
+                
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = opt.correct;
+                cb.onchange = () => {
+                    quizData[currentIndex].options[index].correct = cb.checked;
+                    updateOutput();
+                };
+
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(opt.text));
+                container.appendChild(label);
+            });
+
+            document.getElementById('prev-btn').disabled = currentIndex === 0;
+            document.getElementById('next-btn').innerText = currentIndex === quizData.length - 1 ? "Befejezés" : "Következő";
+        }
+
+        function nextQuestion() {
+            if (currentIndex < quizData.length - 1) {
+                currentIndex++;
+                renderQuestion();
+            } else {
+                alert("Végére értél az összes kérdésnek!");
+            }
+        }
+
+        function prevQuestion() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                renderQuestion();
+            }
+        }
+
+        function updateOutput() {
+            document.getElementById('output-json').value = JSON.stringify(quizData, null, 2);
+        }
+
+        function downloadJson() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(quizData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "vegleges_kviz.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
+</body>
+</html>
