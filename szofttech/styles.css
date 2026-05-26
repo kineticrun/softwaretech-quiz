@@ -15,26 +15,13 @@
   h1 { font-size: 2rem; color: #333; }
   
   /* Start Screen */
-  #start-screen { 
-    margin-top: 100px; 
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+  #start-screen { margin-top: 100px; }
   #start-btn {
     padding: 15px 30px;
     font-size: 2rem;
     cursor: pointer;
     border-radius: 12px;
     background-color: #54dfbc;
-  }
-
-  #exam-btn {
-    padding: 15px 30px;
-    font-size: 2rem;
-    cursor: pointer;
-    border-radius: 12px;
-    background-color: lightskyblue;
   }
   
   /* Hidden utility */
