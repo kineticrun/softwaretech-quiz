@@ -169,25 +169,46 @@
   /* Mobil nézet */
 @media (max-width: 768px) {
 
+  body {
+    padding: 10px;
+    overflow-x: hidden;
+  }
+
+  #quiz-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
   #main-sections {
     flex-direction: column;
+    gap: 10px;
+    width: 100%;
   }
 
   #question-section,
   #options-section {
     width: 100%;
+    max-width: 100%;
+    padding: 15px;
+  }
+
+  #options button {
+    width: 100%;
+    word-wrap: break-word;
   }
 
   #controls {
     flex-direction: column;
     gap: 10px;
     align-items: stretch;
+    width: 100%;
   }
 
   #action-buttons {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
   }
 
   #action-buttons button,
@@ -200,9 +221,22 @@
     text-align: center;
   }
 
+  #start-screen {
+    width: 100%;
+  }
+
   #start-btn,
   #exam-btn {
     font-size: 1.5rem;
     width: 100%;
+  }
+
+  #progress-container {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  #progress-bar {
+    flex-wrap: wrap;
   }
 }
