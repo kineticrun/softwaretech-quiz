@@ -2246,5 +2246,27 @@
       }
     ],
     "explanation": ""
+  },
+  {
+    "question": "Milyen töltése van a Cl−, illetve a Na+-ion atommagjának?",
+    "options": [
+      {
+        "text": "Mindkét atommag töltése pozitív",
+        "correct": true
+      },
+      {
+        "text": "A klór atommag töltése negatív, a nátrium atommag töltése pozitív.",
+        "correct": false
+      },
+      {
+        "text": "A klór atommag töltése negatív, a nátrium atommag töltése pozitív.",
+        "correct": false
+      },
+      {
+        "text": "A klór atommag töltése pozitív, a nátrium atommag töltése negatív.",
+        "correct": false
+      }
+    ],
+    "explanation": ""
   }
 ]
