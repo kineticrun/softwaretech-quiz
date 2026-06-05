@@ -4,7 +4,7 @@ let currentIndex = 0;
 let selectedOptions = [];
 let correctCount = 0;
 let currentOptions = [];
-const maxQuestionsPerSession = 30;
+const maxQuestionsPerSession = 12;
 
 let examMode = false; // <-- ÚJ
 
